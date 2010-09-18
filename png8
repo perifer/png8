@@ -1,0 +1,237 @@
+#!/usr/bin/env python
+import optparse
+import subprocess
+import os
+import tempfile
+import shutil
+
+class Png8:
+    converters = [
+            # pngquant, Floyd-Steinberg dithering
+            {"ext": "-fs8.png", "args": ["pngquant", "-f"]},
+            # pngquant, ordered dithering
+            {"ext": "-or8.png", "args": ["pngquant", "-f", "-ordered"]},
+            # pngnq, Floyd-Steinberg dithering
+            {"ext": "-nf8.png", "args": ["pngnq", "-f", "-Q", "f", "-e",
+                "-nf8.png"]},
+            # pngnq, no dithering
+            {"ext": "-nq8.png", "args": ["pngnq", "-f", "-e", "-nq8.png"]},
+        ]
+
+    def main(self):
+        usage = 'Usage: %prog [options] <path>...'
+        description = 'Uses pngquant and/or pngnq to easily convert images to \
+8-bit png. The file(s) is overwritten and a backup is created with a \
+.backup.png extension.'
+        version = '%prog version 1.0'
+        parser = optparse.OptionParser(usage=usage, description=description,
+                version=version)
+        parser.add_option("-p", "--preview", action="store_true",
+                help="preview the original and converted png in Preview.app")
+        parser.add_option("-O", "--nobackup", action="store_true",
+                help="overwrite original file, without backup. Preview is not \
+available with this option")
+        parser.add_option("-i", "--interactive", action="store_true",
+                help="show preview of available variants and select which one \
+to generate")
+        parser.add_option("-f", "--force", action="store_true",
+                help="convert even if file is already an 8-bit png")
+        parser.add_option("-d", "--destination", action="store",
+                type="string", dest="destination",
+                help="specify a destination for the generated file(s)")
+
+        (opts, args) = parser.parse_args()
+
+        # Check that there are available converters.
+        converter_status = self.check_converters()
+        if not converter_status:
+            parser.error("pngquant or pngnq is not available in your PATH.");
+
+        if opts.nobackup and opts.preview and not opts.interactive:
+            parser.error("The preview options is not available when \
+                    nobackup is enabled.");
+
+        if opts.destination and not os.path.exists(opts.destination):
+            parser.error("Directory does not exist");
+
+        if not args:
+            parser.print_help()
+            exit()
+
+        for file in args:
+            if not os.path.isfile(file):
+                print "{0:s} does not exist.".format(file)
+                continue
+
+            if not self.is_png(file):
+                print "{0:s} is not a png file.".format(file)
+                continue
+
+            if not opts.force and self.is_png8(file):
+                print "{0:s} is already in 8-bit png. Use -f to force \
+                        conversion.".format(file)
+                continue
+
+            tempdir = tempfile.mkdtemp()
+            print '{0}:'.format(os.path.basename(file))
+            if opts.interactive:
+                new_files = []
+                i = 1
+                for converter in self.converters:
+                    # Check that the converter is available.
+                    if converter_status[converter["args"][0]]:
+                        new_file = self.convert(converter, file, tempdir,
+                                opts, i)
+                        if new_file:
+                            new_files.append(new_file)
+                            i = i + 1
+
+                if new_files:
+                    # Preview
+                    self.preview(new_files + [file])
+
+                    # Get new_file from input.
+                    # The selected file is removed from the list.
+                    new_file = self.get_input(new_files)
+
+                    # Remove all other files
+                    for f in new_files:
+                        os.remove(f)
+
+            else:
+                new_file = False
+                for converter in self.converters:
+                    # Check that the converter is available.
+                    if converter_status[converter["args"][0]]:
+                        new_file = self.convert(converter, file, tempdir, opts)
+                        # Break out since an available converter was found.
+                        break
+                if not new_file:
+                    parser.error("No file generated. Are any of the default \
+                            converters are available?");
+
+            # Defaults
+            org_file = dest_file = file
+            if new_file:
+                # Backup
+                if not opts.nobackup:
+                    org_file = self.filename_append(file, ".backup.png")
+                    os.rename(file, org_file);
+
+                # Overwrite original file or move to destination dir.
+                if opts.destination:
+                    dest_file = os.path.join(opts.destination,
+                            os.path.basename(file))
+
+                os.rename(new_file, dest_file);
+                new_file = dest_file
+
+                # Preview files
+                if opts.preview and not opts.interactive:
+                    self.preview([org_file, new_file])
+
+    def check_converters(self):
+        # TODO: dont hardcode converter, parse from converters
+        status = {}
+        exist = False
+        for converter in self.converters:
+            prog = converter["args"][0]
+            proc = subprocess.Popen(['which', prog], stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+            output = proc.communicate()
+
+            if output[0] != '':
+                # Store that converter was found
+                status[prog] = exist = True
+            else:
+                status[prog] = False
+
+        return status if exist else False
+
+    def convert(self, converter, file, dir, opts, i=None):
+        try:
+            # Copy file to temporary folder since pngquant can't be
+            # directed to put the outfile there. This isn't bulletproof
+            # since a file can have the same name as an already generated
+            # file.
+            tempfile = os.path.join(dir, os.path.basename(file))
+            shutil.copyfile(file, tempfile)
+            file = tempfile
+
+            # Convert
+            args = converter["args"]
+            args.append(file)
+            proc = subprocess.Popen(args, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+            proc.communicate()
+            new_file = self.filename_append(file, converter["ext"])
+
+            org_file_size = os.path.getsize(file)
+            new_file_size = os.path.getsize(new_file)
+
+            percent = round(1 - (float(new_file_size) /
+                float(org_file_size)), 3)
+            prefix = ''
+            if i:
+                renamed_file = os.path.join(dir, '{0}.png'.format(i))
+                os.rename(new_file, renamed_file)
+                new_file = renamed_file
+            print "{0}: {1} => {2} = {3:3.1%} savings".format(
+                    os.path.basename(new_file), self.pretty_size(org_file_size),
+                    self.pretty_size(new_file_size), percent)
+        except (OSError):
+            # TODO: more granular error handling?
+            print "Error when using {0}.".format(args[0])
+            new_file = False
+        return new_file
+
+    def get_input(self, new_files):
+        try:
+            input = raw_input("Enter the number of the variant to use: ")
+            if input == '':
+                new_file = False
+                print "No variant selected."
+            else:
+                new_file = new_files.pop(int(input)-1)
+        except KeyboardInterrupt:
+            print ""
+            exit()
+        except:
+            print "Invalid input: Enter a number from 1 to %d or leave blank \
+                    to abort." % len(new_files)
+            new_file = self.get_input(new_files)
+        else:
+            return new_file
+
+    def preview(self, files):
+        #  Use Mac OS X preview.app to open files.
+        args = ["open", "-a", "/Applications/Preview.app"]
+        args.extend(files)
+        subprocess.call(args)
+
+    def filename_append(self, file, ext):
+        return os.path.splitext(file)[0] + ext
+
+    def is_png8(self, file):
+        # Use Mac OS X file utility to check if file is a 8-bit png.
+        proc = subprocess.Popen(["file", file], stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+        return proc.communicate()[0].find("8-bit colormap") > -1
+
+    def is_png(self, file):
+        # Use Mac OS X file utility to check if file is a png-file.
+        proc = subprocess.Popen(["file", file], stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+        return proc.communicate()[0].find("PNG image") > -1
+
+    def pretty_size(self, num):
+        # Pretty print binary values
+        for x in ["B", "K", "M", "G"]:
+            if num < 1024.0 or x == "G":
+                return "%5.1f%s" % (num, x)
+            num = num / 1024.0
+
+if __name__ == "__main__":
+    png8 = Png8()
+    png8.main()
+
