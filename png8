@@ -123,7 +123,7 @@ to generate")
                 os.rename(new_file, dest_file);
                 new_file = dest_file
 
-                # Preview files
+                # Preview files. Interactive mode has already previewed.
                 if opts.preview and not opts.interactive:
                     self.preview([org_file, new_file])
 
