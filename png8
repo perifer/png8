@@ -105,7 +105,7 @@ to generate")
                         # Break out since an available converter was found.
                         break
                 if not new_file:
-                    parser.error("No file generated. Are any of the default converters are available?");
+                    parser.error("No file generated. Are any of the default converters available?");
 
             # Defaults
             org_file = dest_file = file
