@@ -127,21 +127,20 @@ to generate")
                 if opts.preview and not opts.interactive:
                     self.preview([org_file, new_file])
 
+    def which(self, prog):
+        proc = subprocess.Popen(['which', prog], stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+        output = proc.communicate()
+
+        return output[0] != ''
+
     def check_converters(self):
         # TODO: dont hardcode converter, parse from converters
         status = {}
         exist = False
         for converter in self.converters:
-            prog = converter["args"][0]
-            proc = subprocess.Popen(['which', prog], stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE)
-            output = proc.communicate()
-
-            if output[0] != '':
-                # Store that converter was found
-                status[prog] = exist = True
-            else:
-                status[prog] = False
+            prog = converter["args"][0];
+            status[prog] = exist = self.which(prog)
 
         return status if exist else False
 
