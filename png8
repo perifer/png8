@@ -48,8 +48,7 @@ to generate")
             parser.error("pngquant or pngnq is not available in your PATH.");
 
         if opts.nobackup and opts.preview and not opts.interactive:
-            parser.error("The preview options is not available when \
-                    nobackup is enabled.");
+            parser.error("The preview options is not available when nobackup is enabled.");
 
         if opts.destination and not os.path.exists(opts.destination):
             parser.error("Directory does not exist");
@@ -68,8 +67,7 @@ to generate")
                 continue
 
             if not opts.force and self.is_png8(file):
-                print "{0:s} is already in 8-bit png. Use -f to force \
-                        conversion.".format(file)
+                print "{0:s} is already in 8-bit png. Use -f to force conversion.".format(file)
                 continue
 
             tempdir = tempfile.mkdtemp()
@@ -107,8 +105,7 @@ to generate")
                         # Break out since an available converter was found.
                         break
                 if not new_file:
-                    parser.error("No file generated. Are any of the default \
-                            converters are available?");
+                    parser.error("No file generated. Are any of the default converters are available?");
 
             # Defaults
             org_file = dest_file = file
@@ -197,8 +194,7 @@ to generate")
             print ""
             exit()
         except:
-            print "Invalid input: Enter a number from 1 to %d or leave blank \
-                    to abort." % len(new_files)
+            print "Invalid input: Enter a number from 1 to %d or leave blank to abort." % len(new_files)
             new_file = self.get_input(new_files)
         else:
             return new_file
