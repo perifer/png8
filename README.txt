@@ -1,6 +1,7 @@
 Usage: png8 [options] <path>...
 
-Uses pngquant and/or pngnq to easily convert images to 8-bit png. The file(s)
+Uses pngquant and/or pngnq to easily convert images to 8-bit png.
+The converted file is then run through pngout if available. The file(s)
 is overwritten and a backup is created with a .backup.png extension.
 
 Options:

@@ -21,9 +21,10 @@ class Png8:
     def main(self):
         usage = 'Usage: %prog [options] <path>...'
         description = 'Uses pngquant and/or pngnq to easily convert images to \
-8-bit png. The file(s) is overwritten and a backup is created with a \
+8-bit png. The converted file is then run through pngout if available. \
+The file(s) is overwritten and a backup is created with a \
 .backup.png extension.'
-        version = '%prog version 1.0'
+        version = '%prog version 1.1'
         parser = optparse.OptionParser(usage=usage, description=description,
                 version=version)
         parser.add_option("-p", "--preview", action="store_true",
@@ -39,6 +40,8 @@ to generate")
         parser.add_option("-d", "--destination", action="store",
                 type="string", dest="destination",
                 help="specify a destination for the generated file(s)")
+        parser.add_option("--nopngout", action="store_true",
+                help="don't run converted file through pngout.")
 
         (opts, args) = parser.parse_args()
 
@@ -161,6 +164,12 @@ to generate")
                     stderr=subprocess.PIPE)
             proc.communicate()
             new_file = self.filename_append(file, converter["ext"])
+
+            # Run through pngout if available.
+            if not opts.nopngout and self.which('pngout'):
+                proc = subprocess.Popen(['pngout', new_file], stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+                proc.communicate()
 
             org_file_size = os.path.getsize(file)
             new_file_size = os.path.getsize(new_file)
