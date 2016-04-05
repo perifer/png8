@@ -27,9 +27,9 @@ Download and install dependencies manually:
 
 Or install with homebrew:
 
-    brew install https://raw.github.com/perifer/png8-tools/master/pngquant.rb
+    brew install pngquant
     brew install pngnq
-    brew install https://raw.github.com/perifer/png8-tools/master/pngout.rb
+    brew install jonof/kenutils/pngout
 
 ## Examples
 
