@@ -17,7 +17,7 @@ http://calendar.perfplanet.com/2010/png-that-works
 
 ## Installation
 
-    curl https://raw.github.com/perifer/png8/master/png8 >> /usr/local/bin/png8 && chmod u+x /usr/local/bin/png8
+    curl https://raw.githubusercontent.com/perifer/png8/master/png8 >> /usr/local/bin/png8 && chmod u+x /usr/local/bin/png8
 
 Download and install dependencies manually:
 
